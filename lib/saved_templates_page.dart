@@ -1,5 +1,4 @@
 import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:pos_detection/scan_pos_page.dart';
 import 'model/pose_template.dart';
@@ -28,6 +27,28 @@ class _SavedTemplatesPageState extends State<SavedTemplatesPage> {
     });
   }
 
+  Future<void> _deleteTemplate(int index) async {
+    final template = templates[index];
+
+    // Remove from list
+    setState(() {
+      templates.removeAt(index);
+    });
+
+    // Delete from SharedPreferences
+    await TemplateStorage.saveTemplates(templates);
+
+    // Optionally delete the image file also
+    final file = File(template.imagePath);
+    if (await file.exists()) {
+      await file.delete();
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('${template.name} deleted')),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -35,57 +56,51 @@ class _SavedTemplatesPageState extends State<SavedTemplatesPage> {
       body: templates.isEmpty
           ? const Center(child: Text('No saved templates found.'))
           : ListView.builder(
-              itemCount: templates.length,
-              itemBuilder: (context, idx) {
-                final template = templates[idx];
-                return GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => ScanPosePage(template: template,),
-                      ),
-                    );
-                  },
-                  child: Card(
-                    elevation: 4,
-                    margin: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        ClipRRect(
-                          borderRadius: const BorderRadius.vertical(
-                            top: Radius.circular(12),
-                          ),
-                          child: Image.file(
-                            File(template.imagePath),
-                            height: 180, // Bigger image
-                            width: double.infinity,
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.all(12.0),
-                          child: Text(
-                            template.name,
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+        itemCount: templates.length,
+        itemBuilder: (context, idx) {
+          final template = templates[idx];
+          return Card(
+            elevation: 4,
+            margin: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 8,
+            ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: ListTile(
+              leading: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.file(
+                  File(template.imagePath),
+                  height: 60,
+                  width: 60,
+                  fit: BoxFit.cover,
+                ),
+              ),
+              title: Text(
+                template.name,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ScanPosePage(template: template),
                   ),
                 );
               },
+              trailing: IconButton(
+                icon: const Icon(Icons.delete, color: Colors.red),
+                onPressed: () => _deleteTemplate(idx),
+              ),
             ),
+          );
+        },
+      ),
     );
   }
 }
