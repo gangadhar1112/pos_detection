@@ -174,9 +174,9 @@ class WithoutBackgroundPose extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     if (pose.landmarks.isEmpty) return;
 
-    _drawAllLandmarks(canvas, size); // Optional: for debugging
+    //_drawAllLandmarks(canvas, size); // Optional: for debugging
 
-    _drawDebugElbows(canvas, size);  // Red = left, Green = right
+    //_drawDebugElbows(canvas, size);  // Red = left, Green = right
 
     _drawHead(canvas, size);
 
