@@ -5,7 +5,7 @@ import 'model/pose_template.dart';
 import 'utils/template_storage.dart';
 
 class DashboardPage extends StatefulWidget {
-  const DashboardPage({Key? key}) : super(key: key);
+  const DashboardPage({super.key});
 
   @override
   State<DashboardPage> createState() => _DashboardPageState();
@@ -13,7 +13,7 @@ class DashboardPage extends StatefulWidget {
 
 class _DashboardPageState extends State<DashboardPage> {
   List<PoseTemplate> savedTemplates = [];
-  bool _isSaving = false; // 👈 loading flag
+  bool _isSaving = false;
 
   @override
   void initState() {
@@ -23,23 +23,14 @@ class _DashboardPageState extends State<DashboardPage> {
 
   Future<void> _loadSavedTemplates() async {
     final templates = await TemplateStorage.loadTemplates();
-    setState(() {
-      savedTemplates = templates;
-    });
+    setState(() => savedTemplates = templates);
   }
 
-  /// Called when new template is created
-  void _addNewTemplate(PoseTemplate template) async {
-    setState(() {
-      _isSaving = true; // 👈 show progress
-    });
-
+  Future<void> _addNewTemplate(PoseTemplate template) async {
+    setState(() => _isSaving = true);
     savedTemplates.add(template);
     await TemplateStorage.saveTemplates(savedTemplates);
-
-    setState(() {
-      _isSaving = false; // 👈 hide progress
-    });
+    setState(() => _isSaving = false);
   }
 
   @override
@@ -63,7 +54,7 @@ class _DashboardPageState extends State<DashboardPage> {
                           onTemplateCreated: _addNewTemplate,
                         ),
                       ),
-                    );
+                    ).then((_) => _loadSavedTemplates());
                   },
                 ),
                 const SizedBox(height: 20),
@@ -82,14 +73,10 @@ class _DashboardPageState extends State<DashboardPage> {
               ],
             ),
           ),
-
-          // 👇 Overlay progress indicator
           if (_isSaving)
             Container(
-              color: Colors.black45,
-              child: const Center(
-                child: CircularProgressIndicator(),
-              ),
+              color: Colors.black38,
+              child: const Center(child: CircularProgressIndicator()),
             ),
         ],
       ),
