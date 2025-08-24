@@ -22,23 +22,15 @@ class _SavedTemplatesPageState extends State<SavedTemplatesPage> {
 
   Future<void> _loadTemplates() async {
     final loaded = await TemplateStorage.loadTemplates();
-    setState(() {
-      templates = loaded;
-    });
+    setState(() => templates = loaded);
   }
 
   Future<void> _deleteTemplate(int index) async {
     final template = templates[index];
 
-    // Remove from list
-    setState(() {
-      templates.removeAt(index);
-    });
-
-    // Save updated list
+    setState(() => templates.removeAt(index));
     await TemplateStorage.saveTemplates(templates);
 
-    // Optionally delete the image file
     final file = File(template.imagePath);
     if (await file.exists()) {
       await file.delete();
@@ -49,139 +41,197 @@ class _SavedTemplatesPageState extends State<SavedTemplatesPage> {
     );
   }
 
-  void _showImageDialog(PoseTemplate template, int index) {
-    showDialog(
+  void _showImageBottomSheet(PoseTemplate template, int index) {
+    showModalBottomSheet(
       context: context,
-      builder: (_) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Full Image
-            ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-              child: Image.file(
-                File(template.imagePath),
-                fit: BoxFit.contain,
-                height: 300,
-                width: double.infinity,
-              ),
-            ),
-            const SizedBox(height: 8),
-
-            // Name
-            Text(
-              template.name,
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-
-            const SizedBox(height: 12),
-
-            // Action Buttons
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                // Delete Option
-                // ElevatedButton.icon(
-                //   style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                //   icon: const Icon(Icons.delete, color: Colors.white),
-                //   label: const Text("Delete"),
-                //   onPressed: () {
-                //     Navigator.pop(context); // Close dialog
-                //     _deleteTemplate(index);
-                //   },
-                // ),
-
-                // Recreate Option
-                ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
-                  icon: const Icon(Icons.refresh, color: Colors.white),
-                  label: const Text("Recreate Pose"),
-                  onPressed: () {
-                    Navigator.pop(context);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => ScanPosePage(template: template),
-                      ),
-                    );
-                  },
-                ),
-
-                // Close Option
-                ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.grey),
-                  icon: const Icon(Icons.close, color: Colors.white),
-                  label: const Text("Close"),
-                  onPressed: () => Navigator.pop(context),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 12),
-          ],
-        ),
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
+      builder: (_) {
+        return Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: Image.file(
+                  File(template.imagePath),
+                  height: 220,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                template.name,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    icon: const Icon(Icons.refresh, color: Colors.white),
+                    label: const Text("Recreate Pose"),
+                    onPressed: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ScanPosePage(template: template),
+                        ),
+                      );
+                    },
+                  ),
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    icon: const Icon(Icons.delete, color: Colors.white),
+                    label: const Text("Delete"),
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _deleteTemplate(index);
+                    },
+                  ),
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.grey,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    icon: const Icon(Icons.close, color: Colors.white),
+                    label: const Text("Close"),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+            ],
+          ),
+        );
+      },
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white30,
-      appBar: AppBar(title: const Text('Saved Templates')),
+      backgroundColor: Colors.grey[100],
+      appBar: AppBar(
+        elevation: 0,
+        backgroundColor: Colors.deepPurple,
+        title: const Text("📂 Saved Templates"),
+        centerTitle: true,
+      ),
       body: templates.isEmpty
-          ? const Center(child: Text('No saved templates found.'))
-          : ListView.builder(
-        itemCount: templates.length,
-        itemBuilder: (context, idx) {
-          final template = templates[idx];
-          return Card(
-            elevation: 4,
-            margin: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 8,
-            ),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(12),
-              onTap: () => _showImageDialog(template, idx),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Full width image
-                  ClipRRect(
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-                    child: Image.file(
-                      File(template.imagePath),
-                      width: double.infinity,
-                      fit: BoxFit.cover,
+          ? _buildEmptyState()
+          : Padding(
+        padding: const EdgeInsets.all(12),
+        child: GridView.builder(
+          itemCount: templates.length,
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            childAspectRatio: 0.85,
+          ),
+          itemBuilder: (context, idx) {
+            final template = templates[idx];
+            return GestureDetector(
+              onTap: () => _showImageBottomSheet(template, idx),
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  image: DecorationImage(
+                    image: FileImage(File(template.imagePath)),
+                    fit: BoxFit.cover,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.15),
+                      blurRadius: 6,
+                      offset: const Offset(2, 3),
+                    )
+                  ],
+                ),
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.black.withOpacity(0.6),
+                        Colors.transparent
+                      ],
+                      begin: Alignment.bottomCenter,
+                      end: Alignment.topCenter,
                     ),
                   ),
-                  Container(
-                    width: double.infinity,
-                    color: Colors.blueGrey,
+                  child: Align(
+                    alignment: Alignment.bottomCenter,
                     child: Padding(
-                      padding: const EdgeInsets.all(12.0),
+                      padding: const EdgeInsets.all(10),
                       child: Text(
                         template.name,
                         style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          shadows: [
+                            Shadow(
+                              color: Colors.black,
+                              offset: Offset(1, 1),
+                              blurRadius: 3,
+                            )
+                          ],
                         ),
+                        textAlign: TextAlign.center,
                       ),
                     ),
                   ),
-                ],
+                ),
               ),
-            ),
-          );
-        },
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.photo_library_outlined,
+              size: 80, color: Colors.grey),
+          const SizedBox(height: 16),
+          const Text(
+            "No saved templates yet",
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            "Start by creating a new pose template",
+            style: TextStyle(fontSize: 14, color: Colors.black54),
+          ),
+        ],
       ),
     );
   }

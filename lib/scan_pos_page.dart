@@ -17,7 +17,8 @@ class ScanPosePage extends StatefulWidget {
   State<ScanPosePage> createState() => _ScanPosePageState();
 }
 
-class _ScanPosePageState extends State<ScanPosePage> {
+class _ScanPosePageState extends State<ScanPosePage>
+    with SingleTickerProviderStateMixin {
   CameraController? _controller;
   PoseDetector? _poseDetector;
   bool _isDetecting = false;
@@ -31,14 +32,19 @@ class _ScanPosePageState extends State<ScanPosePage> {
   double _posMatchRatio = 0.0;
   double _distMatchRatio = 0.0;
 
+  late AnimationController _glowController;
+
   @override
   void initState() {
     super.initState();
     _poseDetector = PoseDetector(options: PoseDetectorOptions());
     _startCamera();
+
+    _glowController =
+    AnimationController(vsync: this, duration: const Duration(seconds: 2))
+      ..repeat(reverse: true);
   }
 
-  /// Initialize camera and start pose detection stream
   Future<void> _startCamera() async {
     final cameras = await availableCameras();
     final controller = CameraController(
@@ -52,7 +58,6 @@ class _ScanPosePageState extends State<ScanPosePage> {
     if (mounted) setState(() => _controller = controller);
   }
 
-  /// Convert raw CameraImage -> InputImage for MLKit
   InputImage _convertCameraImage(CameraImage image, int rotation) {
     final WriteBuffer allBytes = WriteBuffer();
     for (final plane in image.planes) {
@@ -75,17 +80,13 @@ class _ScanPosePageState extends State<ScanPosePage> {
     return InputImage.fromBytes(bytes: bytes, metadata: inputImageMetadata);
   }
 
-  /// Camera frame → Pose Detection → Compare with Template
   void _processCameraImage(CameraImage image) async {
     if (_isDetecting || _controller == null || _poseDetector == null || _hasCaptured) return;
     _isDetecting = true;
 
     try {
-      final inputImage = _convertCameraImage(
-        image,
-        _controller!.description.sensorOrientation,
-      );
-
+      final inputImage =
+      _convertCameraImage(image, _controller!.description.sensorOrientation);
       final poses = await _poseDetector!.processImage(inputImage);
 
       if (poses.isNotEmpty) {
@@ -101,7 +102,6 @@ class _ScanPosePageState extends State<ScanPosePage> {
           _distMatchRatio = result['distanceMatchRatio'] as double;
         });
 
-        /// Auto-capture when pose matches
         if (_poseMatched && !_hasCaptured) {
           _hasCaptured = true;
           await _controller?.stopImageStream();
@@ -127,13 +127,10 @@ class _ScanPosePageState extends State<ScanPosePage> {
     }
   }
 
-  /// Pose comparison (position + distance similarity)
   Map<String, dynamic> _compareWithTemplate(Pose detected, PoseTemplate template) {
-    // position-based
-    const double perLandmarkThreshold = 0.12; // tolerance
+    const double perLandmarkThreshold = 0.12;
     const double posMatchRatioThreshold = 0.75;
 
-    // distance-based
     const double distanceDiffThreshold = 0.15;
     const double distanceMatchRatioThreshold = 0.70;
 
@@ -166,9 +163,9 @@ class _ScanPosePageState extends State<ScanPosePage> {
     }
 
     final posMatchRatio = totalCount > 0 ? matchedCount / totalCount : 0.0;
-    final avgDistance = comparedCount > 0 ? totalDistance / comparedCount : double.infinity;
+    final avgDistance =
+    comparedCount > 0 ? totalDistance / comparedCount : double.infinity;
 
-    // --- Distance-based (scale-invariant)
     final liveDistances = PoseTemplate.calculateDistances(detectedLms);
     int distMatches = 0;
 
@@ -189,16 +186,14 @@ class _ScanPosePageState extends State<ScanPosePage> {
 
     return {
       'matched': matched,
-      'suggestion': matched
-          ? 'Pose Matched! Ready to capture.'
-          : 'Adjust your pose to match the guide',
+      'suggestion':
+      matched ? '✅ Perfect Pose!' : '⚠️ Adjust your position...',
       'avgDistance': avgDistance,
       'matchRatio': posMatchRatio,
       'distanceMatchRatio': distMatchRatio,
     };
   }
 
-  /// Normalize by torso size (scale invariant)
   List<PoseLandmark> _normalizeLandmarks(List<PoseLandmark> lms) {
     PoseLandmark getOr(PoseLandmarkType t, PoseLandmark fb) =>
         lms.firstWhere((e) => e.type == t, orElse: () => fb);
@@ -227,26 +222,28 @@ class _ScanPosePageState extends State<ScanPosePage> {
         .toList();
   }
 
-  /// Dialog after capturing a matched pose
   Future<void> _showCapturedPoseDialog(String imagePath) async {
     await showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Pose Captured'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('🎉 Pose Captured!'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Image.file(File(imagePath), height: 200),
+            Image.file(File(imagePath), height: 200, fit: BoxFit.cover),
             const SizedBox(height: 16),
-            Text(
-              'Position AvgDist: ${_avgPosDistance.toStringAsFixed(3)}\n'
-                  'Position Match: ${(_posMatchRatio * 100).toStringAsFixed(1)}%\n'
-                  'Distance Match: ${(_distMatchRatio * 100).toStringAsFixed(1)}%',
-            ),
+            _buildStatCard("Position", "${(_posMatchRatio * 100).toStringAsFixed(1)}%"),
+            _buildStatCard("Distance", "${(_distMatchRatio * 100).toStringAsFixed(1)}%"),
+            _buildStatCard("Avg Dist", _avgPosDistance.toStringAsFixed(3)),
           ],
         ),
         actions: [
-          TextButton(
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              backgroundColor: Colors.blue,
+            ),
             onPressed: () {
               setState(() {
                 _poseMatched = false;
@@ -257,12 +254,31 @@ class _ScanPosePageState extends State<ScanPosePage> {
                 _posMatchRatio = 0.0;
                 _distMatchRatio = 0.0;
               });
-              Navigator.of(context).pop(); // close dialog
-              Navigator.of(context).pop(); // back to SavedTemplatesPage
+              Navigator.of(context).pop();
+              Navigator.of(context).pop();
             },
-            child: const Text('OK'),
+            child: const Text('Done'),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildStatCard(String title, String value) {
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 6),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(10),
+        child: Row(
+          children: [
+            Icon(Icons.check_circle, color: Colors.blue.shade600),
+            const SizedBox(width: 10),
+            Text("$title: ",
+                style: const TextStyle(fontWeight: FontWeight.bold)),
+            Text(value),
+          ],
+        ),
       ),
     );
   }
@@ -271,6 +287,7 @@ class _ScanPosePageState extends State<ScanPosePage> {
   void dispose() {
     _controller?.dispose();
     _poseDetector?.close();
+    _glowController.dispose();
     super.dispose();
   }
 
@@ -281,13 +298,16 @@ class _ScanPosePageState extends State<ScanPosePage> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: Text('Scan Pose: ${widget.template.name}')),
+      appBar: AppBar(
+        title: Text('📸 Match Pose: ${widget.template.name}'),
+        backgroundColor: Colors.deepPurple,
+        elevation: 4,
+      ),
       body: Stack(
         fit: StackFit.expand,
         children: [
           CameraPreview(_controller!),
 
-          /// Draw saved template landmarks as overlay (reference pose)
           CustomPaint(
             painter: WithoutBackgroundPose(
               pose: widget.template.landmarksToPose(),
@@ -295,25 +315,36 @@ class _ScanPosePageState extends State<ScanPosePage> {
             ),
           ),
 
-          /// Live suggestion / match %
           if (_suggestion.isNotEmpty)
             Align(
               alignment: Alignment.topCenter,
-              child: Container(
-                margin: const EdgeInsets.only(top: 40),
-                padding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(
-                  color: Colors.black54,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  '$_suggestion\n'
-                      'AvgDist: ${_avgPosDistance.toStringAsFixed(3)} | '
-                      'Pos: ${(_posMatchRatio * 100).toStringAsFixed(1)}% | '
-                      'Dist: ${(_distMatchRatio * 100).toStringAsFixed(1)}%',
-                  style: const TextStyle(color: Colors.white, fontSize: 15),
-                  textAlign: TextAlign.center,
+              child: ScaleTransition(
+                scale: Tween(begin: 0.95, end: 1.05)
+                    .animate(CurvedAnimation(parent: _glowController, curve: Curves.easeInOut)),
+                child: Container(
+                  margin: const EdgeInsets.only(top: 30),
+                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: _poseMatched
+                          ? [Colors.greenAccent.shade400, Colors.green.shade700]
+                          : [Colors.redAccent.shade200, Colors.red.shade600],
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: _poseMatched ? Colors.greenAccent : Colors.redAccent,
+                        blurRadius: 12,
+                        spreadRadius: 1,
+                      )
+                    ],
+                  ),
+                  child: Text(
+                    '$_suggestion\n📊 Pos: ${(_posMatchRatio * 100).toStringAsFixed(1)}% | '
+                        'Dist: ${(_distMatchRatio * 100).toStringAsFixed(1)}%',
+                    style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                    textAlign: TextAlign.center,
+                  ),
                 ),
               ),
             ),

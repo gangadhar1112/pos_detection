@@ -7,7 +7,6 @@ import 'package:google_mlkit_pose_detection/google_mlkit_pose_detection.dart';
 import 'package:image/image.dart' as img;
 import 'model/pose_template.dart';
 
-
 class CreatePoseTemplatePage extends StatefulWidget {
   final Function(PoseTemplate) onTemplateCreated;
 
@@ -84,9 +83,8 @@ class _CreatePoseTemplatePageState extends State<CreatePoseTemplatePage> {
     final bytes = allBytes.done().buffer.asUint8List();
 
     final imageSize = Size(image.width.toDouble(), image.height.toDouble());
-    final rotation =
-        InputImageRotationValue.fromRawValue(sensorOrientation) ??
-            InputImageRotation.rotation0deg;
+    final rotation = InputImageRotationValue.fromRawValue(sensorOrientation) ??
+        InputImageRotation.rotation0deg;
 
     final meta = InputImageMetadata(
       size: imageSize,
@@ -110,8 +108,9 @@ class _CreatePoseTemplatePageState extends State<CreatePoseTemplatePage> {
       final poses = await _poseDetector.processImage(inputImage);
 
       if (poses.isEmpty) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('No pose detected in captured image')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No pose detected in captured image')),
+        );
         return;
       }
 
@@ -137,8 +136,9 @@ class _CreatePoseTemplatePageState extends State<CreatePoseTemplatePage> {
     } catch (e) {
       if (kDebugMode) print('Error saving pose: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Error: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);
@@ -159,58 +159,135 @@ class _CreatePoseTemplatePageState extends State<CreatePoseTemplatePage> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Create Pose Template')),
       body: Stack(
         fit: StackFit.expand,
         children: [
           CameraPreview(_controller!),
-          // if (_currentPose != null && _previewSize != null)
-          //   CustomPaint(
-          //     painter: PosePainter(
-          //       pose: _currentPose!,
-          //       imageSize: _previewSize!, // camera frame size
-          //       widgetSize: Size(
-          //         MediaQuery.of(context).size.width,
-          //         MediaQuery.of(context).size.height -
-          //             kToolbarHeight -
-          //             MediaQuery.of(context).padding.top,
-          //       ),
-          //       isFrontCamera:false,
-          //     ),
-          //   ),
+
+          // Gradient Overlay
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Colors.black.withOpacity(0.4),
+                  Colors.transparent,
+                  Colors.black.withOpacity(0.6),
+                ],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ),
+            ),
+          ),
+
+          // Top Bar
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: const [
+                  BackButton(color: Colors.white),
+                  Text(
+                    "Create Pose Template",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  SizedBox(width: 48), // Spacer for symmetry
+                ],
+              ),
+            ),
+          ),
+
+          // Bottom Controls
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 16, left: 16, right: 16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Thumbnail Preview
+                    if (_capturedPath != null)
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.file(
+                          File(_capturedPath!),
+                          height: 100,
+                          width: 100,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    const SizedBox(height: 12),
+
+                    // Pose Name Input
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.9),
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black26,
+                            blurRadius: 6,
+                            offset: const Offset(0, 3),
+                          )
+                        ],
+                      ),
+                      child: TextField(
+                        style: TextStyle(color: Colors.black),
+
+                        decoration: const InputDecoration(
+                          contentPadding: EdgeInsets.all(12),
+                          border: InputBorder.none,
+                          hintText: 'Enter Pose Name',
+                          hintStyle: TextStyle(color: Colors.black),
+                          prefixIcon: Icon(Icons.edit,color: Colors.black),
+                        ),
+                        onChanged: (v) => setState(() => _poseName = v),
+                      ),
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    // Capture Button
+                    GestureDetector(
+                      onTap: _poseName.isNotEmpty ? _capturePoseTemplate : null,
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 4),
+                        ),
+                        child: Container(
+                          height: 70,
+                          width: 70,
+                          decoration: BoxDecoration(
+                            color: _poseName.isNotEmpty
+                                ? Colors.redAccent
+                                : Colors.grey,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          // Saving Overlay
           if (_isSaving)
             Container(
-              color: Colors.black38,
-              child: const Center(child: CircularProgressIndicator()),
+              color: Colors.black54,
+              child: const Center(
+                child: CircularProgressIndicator(color: Colors.white),
+              ),
             ),
         ],
-      ),
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (_capturedPath != null)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: Image.file(File(_capturedPath!), height: 120),
-                ),
-              TextField(
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  labelText: 'Pose Name',
-                ),
-                onChanged: (v) => setState(() => _poseName = v),
-              ),
-              const SizedBox(height: 8),
-              ElevatedButton(
-                onPressed: _poseName.isNotEmpty ? _capturePoseTemplate : null,
-                child: const Text('Capture & Save'),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
