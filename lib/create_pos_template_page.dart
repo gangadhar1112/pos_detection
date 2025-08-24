@@ -5,8 +5,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_mlkit_pose_detection/google_mlkit_pose_detection.dart';
 import 'package:image/image.dart' as img;
-import 'package:pos_detection/pos.dart';
-import 'package:pos_detection/with_out_image_pose.dart';
 import 'model/pose_template.dart';
 
 
