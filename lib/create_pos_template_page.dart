@@ -30,6 +30,7 @@ class _CreatePoseTemplatePageState extends State<CreatePoseTemplatePage> {
 
   Size? _previewSize;
   bool _isFrontCamera = false;
+  bool _isSaving = false;
 
   @override
   void initState() {
@@ -114,40 +115,57 @@ class _CreatePoseTemplatePageState extends State<CreatePoseTemplatePage> {
   }
 
   Future<void> _capturePoseTemplate() async {
-    if (_controller == null || !_controller!.value.isInitialized) return;
-
-    final XFile picture = await _controller!.takePicture();
+    if (_controller == null || !_controller!.value.isInitialized || _isSaving) return;
 
     setState(() {
-      _capturedPath = picture.path;
+      _isSaving = true; // Start loading
     });
 
-    final inputImage = InputImage.fromFilePath(picture.path);
-    final poses = await _poseDetector.processImage(inputImage);
+    try {
+      final XFile picture = await _controller!.takePicture();
 
-    if (poses.isNotEmpty) {
-      final pose = poses.first;
+      setState(() {
+        _capturedPath = picture.path;
+      });
 
-      final bytes = await File(picture.path).readAsBytes();
-      final decodedImage = img.decodeImage(bytes);
+      final inputImage = InputImage.fromFilePath(picture.path);
+      final poses = await _poseDetector.processImage(inputImage);
 
-      final imageSize = decodedImage == null
-          ? Size.zero
-          : Size(decodedImage.width.toDouble(), decodedImage.height.toDouble());
+      if (poses.isNotEmpty) {
+        final pose = poses.first;
 
-      final template = PoseTemplate(
-        name: _poseName,
-        imagePath: picture.path,
-        landmarks: pose.landmarks.values.toList(),
-        imageSize: imageSize,
-      );
+        final bytes = await File(picture.path).readAsBytes();
+        final decodedImage = img.decodeImage(bytes);
 
-      widget.onTemplateCreated(template);
-      Navigator.of(context).pop();
-    } else {
+        final imageSize = decodedImage == null
+            ? Size.zero
+            : Size(decodedImage.width.toDouble(), decodedImage.height.toDouble());
+
+        final template = PoseTemplate(
+          name: _poseName,
+          imagePath: picture.path,
+          landmarks: pose.landmarks.values.toList(),
+          imageSize: imageSize,
+        );
+
+        widget.onTemplateCreated(template);
+        if (mounted) Navigator.of(context).pop();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No pose detected in captured image')),
+        );
+      }
+    } catch (e) {
+      print('Error saving pose: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No pose detected in captured image')),
+        SnackBar(content: Text('Error: ${e.toString()}')),
       );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+      }
     }
   }
 

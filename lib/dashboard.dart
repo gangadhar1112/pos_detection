@@ -1,10 +1,8 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
-import 'package:pos_detection/scan_pos_page.dart';
-
 import 'create_pos_template_page.dart';
+import 'saved_templates_page.dart';
 import 'model/pose_template.dart';
+import 'utils/template_storage.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({Key? key}) : super(key: key);
@@ -14,11 +12,33 @@ class DashboardPage extends StatefulWidget {
 }
 
 class _DashboardPageState extends State<DashboardPage> {
-  final List<PoseTemplate> savedTemplates = [];
+  List<PoseTemplate> savedTemplates = [];
+  bool _isSaving = false; // 👈 loading flag
 
-  void _addNewTemplate(PoseTemplate template) {
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedTemplates();
+  }
+
+  Future<void> _loadSavedTemplates() async {
+    final templates = await TemplateStorage.loadTemplates();
     setState(() {
-      savedTemplates.add(template);
+      savedTemplates = templates;
+    });
+  }
+
+  /// Called when new template is created
+  void _addNewTemplate(PoseTemplate template) async {
+    setState(() {
+      _isSaving = true; // 👈 show progress
+    });
+
+    savedTemplates.add(template);
+    await TemplateStorage.saveTemplates(savedTemplates);
+
+    setState(() {
+      _isSaving = false; // 👈 hide progress
     });
   }
 
@@ -26,63 +46,52 @@ class _DashboardPageState extends State<DashboardPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Dashboard')),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            ElevatedButton.icon(
-              icon: const Icon(Icons.add),
-              label: const Text('Create New Pose Template'),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => CreatePoseTemplatePage(
-                      onTemplateCreated: _addNewTemplate,
-                    ),
-                  ),
-                );
-              },
-            ),
-            const SizedBox(height: 24),
-            const Text(
-              'Saved Pose Templates',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const Divider(),
-            Expanded(
-              child: savedTemplates.isEmpty
-                  ? const Center(child: Text('No saved pose templates found.'))
-                  : ListView.builder(
-                itemCount: savedTemplates.length,
-                itemBuilder: (context, idx) {
-                  final template = savedTemplates[idx];
-                  return ListTile(
-                    leading: Image.file(
-                      File(template.imagePath),
-                      width: 50,
-                      height: 50,
-                      fit: BoxFit.cover,
-                    ),
-                    title: Text(template.name),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => ScanPosePage(
-                            template: template,// pass saved image size
-                          ),
+      body: Stack(
+        children: [
+          Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.add),
+                  label: const Text('Create New Pose Template'),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => CreatePoseTemplatePage(
+                          onTemplateCreated: _addNewTemplate,
                         ),
-                      );
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.folder),
+                  label: const Text('Saved Pose Templates'),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const SavedTemplatesPage(),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
 
-                    },
-                  );
-                },
+          // 👇 Overlay progress indicator
+          if (_isSaving)
+            Container(
+              color: Colors.black45,
+              child: const Center(
+                child: CircularProgressIndicator(),
               ),
             ),
-          ],
-        ),
+        ],
       ),
     );
   }
