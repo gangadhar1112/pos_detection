@@ -27,7 +27,6 @@ class _SavedTemplatesPageState extends State<SavedTemplatesPage> {
 
   Future<void> _deleteTemplate(int index) async {
     final template = templates[index];
-
     setState(() => templates.removeAt(index));
     await TemplateStorage.saveTemplates(templates);
 
@@ -44,47 +43,50 @@ class _SavedTemplatesPageState extends State<SavedTemplatesPage> {
   void _showImageBottomSheet(PoseTemplate template, int index) {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: false,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (_) {
         return Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(20, 24, 20, 50),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              /// Preview Image
               ClipRRect(
                 borderRadius: BorderRadius.circular(16),
                 child: Image.file(
                   File(template.imagePath),
-                  height: 220,
+                  height: 200,
                   width: double.infinity,
                   fit: BoxFit.cover,
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 20),
+
+              /// Pose Name
               Text(
                 template.name,
                 style: const TextStyle(
-                  fontSize: 20,
+                  fontSize: 22,
                   fontWeight: FontWeight.bold,
+                  color: Colors.black87,
                 ),
+                textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 20),
 
+              const SizedBox(height: 24),
+
+              /// Action Buttons
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    icon: const Icon(Icons.refresh, color: Colors.white),
-                    label: const Text("Recreate Pose"),
+                  _bottomSheetButton(
+                    icon: Icons.refresh,
+                    label: "Recreate Pose",
+                    color: Colors.deepPurple,
                     onPressed: () {
                       Navigator.pop(context);
                       Navigator.push(
@@ -95,34 +97,23 @@ class _SavedTemplatesPageState extends State<SavedTemplatesPage> {
                       );
                     },
                   ),
-                  ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    icon: const Icon(Icons.delete, color: Colors.white),
-                    label: const Text("Delete"),
+                  _bottomSheetButton(
+                    icon: Icons.delete,
+                    label: "Delete",
+                    color: Colors.redAccent,
                     onPressed: () {
                       Navigator.pop(context);
                       _deleteTemplate(index);
                     },
                   ),
-                  ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.grey,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    icon: const Icon(Icons.close, color: Colors.white),
-                    label: const Text("Close"),
+                  _bottomSheetButton(
+                    icon: Icons.close,
+                    label: "Close",
+                    color: Colors.grey,
                     onPressed: () => Navigator.pop(context),
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
             ],
           ),
         );
@@ -177,7 +168,7 @@ class _SavedTemplatesPageState extends State<SavedTemplatesPage> {
                     gradient: LinearGradient(
                       colors: [
                         Colors.black.withOpacity(0.6),
-                        Colors.transparent
+                        Colors.transparent,
                       ],
                       begin: Alignment.bottomCenter,
                       end: Alignment.topCenter,
@@ -218,20 +209,43 @@ class _SavedTemplatesPageState extends State<SavedTemplatesPage> {
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.photo_library_outlined,
+        children: const [
+          Icon(Icons.photo_library_outlined,
               size: 80, color: Colors.grey),
-          const SizedBox(height: 16),
-          const Text(
+          SizedBox(height: 16),
+          Text(
             "No saved templates yet",
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
           ),
-          const SizedBox(height: 8),
-          const Text(
+          SizedBox(height: 8),
+          Text(
             "Start by creating a new pose template",
             style: TextStyle(fontSize: 14, color: Colors.black54),
           ),
         ],
+      ),
+    );
+  }
+
+  /// 🔹 Reusable bottom sheet button
+  Widget _bottomSheetButton({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onPressed,
+  }) {
+    return ElevatedButton.icon(
+      onPressed: onPressed,
+      icon: Icon(icon, color: Colors.white),
+      label: Text(label),
+      style: ElevatedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        backgroundColor: color,
+        foregroundColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        elevation: 3,
       ),
     );
   }

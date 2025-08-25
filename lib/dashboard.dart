@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'create_pos_template_page.dart';
 import 'saved_templates_page.dart';
@@ -38,10 +40,28 @@ class _DashboardPageState extends State<DashboardPage> {
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
-        elevation: 0,
+        elevation: 4,
         backgroundColor: Colors.deepPurple,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
+        ),
         title: const Text("📊 Pose Dashboard"),
         centerTitle: true,
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => CreatePoseTemplatePage(
+                onTemplateCreated: _addNewTemplate,
+              ),
+            ),
+          ).then((_) => _loadSavedTemplates());
+        },
+        backgroundColor: Colors.deepPurple,
+        icon: const Icon(Icons.add),
+        label: const Text("New Pose"),
       ),
       body: Stack(
         children: [
@@ -88,7 +108,7 @@ class _DashboardPageState extends State<DashboardPage> {
                     color: Colors.deepPurpleAccent,
                     icon: Icons.add_circle,
                     title: "Create New Pose",
-                    subtitle: "Capture & save pose template",
+                    subtitle: "Capture & save pose",
                     onTap: () {
                       Navigator.push(
                         context,
@@ -138,6 +158,43 @@ class _DashboardPageState extends State<DashboardPage> {
                   ),
                 ],
               ),
+
+              /// Recent Templates Preview
+              if (savedTemplates.isNotEmpty) ...[
+                const Padding(
+                  padding: EdgeInsets.only(top: 24, bottom: 8),
+                  child: Text(
+                    "Recent Templates",
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.black,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                SizedBox(
+                  height: 110,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: savedTemplates.length > 5 ? 5 : savedTemplates.length,
+                    itemBuilder: (_, index) {
+                      final template = savedTemplates[savedTemplates.length - 1 - index];
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 12),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.file(
+                            File(template.imagePath),
+                            width: 100,
+                            height: 100,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ]
             ],
           ),
 
@@ -160,51 +217,53 @@ class _DashboardPageState extends State<DashboardPage> {
     required String subtitle,
     required VoidCallback onTap,
   }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          gradient: LinearGradient(
-            colors: [color.withOpacity(0.8), color],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: color.withOpacity(0.2),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
-          boxShadow: [
-            BoxShadow(
-              color: color.withOpacity(0.3),
-              blurRadius: 8,
-              spreadRadius: 2,
-              offset: const Offset(3, 3),
-            )
-          ],
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 50, color: Colors.white),
-            const SizedBox(height: 12),
-            Text(
-              title,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircleAvatar(
+                radius: 30,
+                backgroundColor: color.withOpacity(0.15),
+                child: Icon(icon, size: 30, color: color),
               ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 6),
-            Text(
-              subtitle,
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.9),
-                fontSize: 13,
+              const SizedBox(height: 12),
+              Text(
+                title,
+                style: TextStyle(
+                  color: Colors.grey[900],
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
               ),
-              textAlign: TextAlign.center,
-            ),
-          ],
+              const SizedBox(height: 6),
+              Text(
+                subtitle,
+                style: TextStyle(
+                  color: Colors.grey[600],
+                  fontSize: 13,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_mlkit_pose_detection/google_mlkit_pose_detection.dart';
 import 'package:image/image.dart' as img;
+
 import 'model/pose_template.dart';
 
 class CreatePoseTemplatePage extends StatefulWidget {
@@ -109,12 +110,43 @@ class _CreatePoseTemplatePageState extends State<CreatePoseTemplatePage> {
 
       if (poses.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No pose detected in captured image')),
+          SnackBar(
+            content: const Text('No pose detected in captured image'),
+            backgroundColor: Colors.redAccent,
+            behavior: SnackBarBehavior.floating, // Makes the snackbar float, looks better
+            margin: const EdgeInsets.all(12), // Adds some margin around the snackbar
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+            duration: const Duration(seconds: 3), // Controls how long snackbar shows
+          ),
         );
         return;
       }
 
+
       final pose = poses.first;
+      final landmarks = pose.landmarks;
+
+      // Validation step
+      List<PoseLandmarkType> requiredPoints = [
+        PoseLandmarkType.leftShoulder,
+        PoseLandmarkType.rightShoulder,
+        PoseLandmarkType.leftHip,
+        PoseLandmarkType.rightHip,
+      ];
+
+      bool hasAllRequiredLandmarks = requiredPoints.every((type) {
+        final landmark = landmarks[type];
+        return landmark != null && landmark.likelihood > 0.5;
+      });
+
+      if (!hasAllRequiredLandmarks) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Pose detection is not clear. Please try again.')),
+        );
+        return;
+      }
 
       final bytes = await File(picture.path).readAsBytes();
       final decoded = img.decodeImage(bytes);
@@ -210,7 +242,6 @@ class _CreatePoseTemplatePageState extends State<CreatePoseTemplatePage> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Thumbnail Preview
                     if (_capturedPath != null)
                       ClipRRect(
                         borderRadius: BorderRadius.circular(12),
@@ -223,7 +254,6 @@ class _CreatePoseTemplatePageState extends State<CreatePoseTemplatePage> {
                       ),
                     const SizedBox(height: 12),
 
-                    // Pose Name Input
                     Container(
                       decoration: BoxDecoration(
                         color: Colors.white.withOpacity(0.9),
@@ -237,14 +267,13 @@ class _CreatePoseTemplatePageState extends State<CreatePoseTemplatePage> {
                         ],
                       ),
                       child: TextField(
-                        style: TextStyle(color: Colors.black),
-
+                        style: const TextStyle(color: Colors.black),
                         decoration: const InputDecoration(
                           contentPadding: EdgeInsets.all(12),
                           border: InputBorder.none,
                           hintText: 'Enter Pose Name',
                           hintStyle: TextStyle(color: Colors.black),
-                          prefixIcon: Icon(Icons.edit,color: Colors.black),
+                          prefixIcon: Icon(Icons.edit, color: Colors.black),
                         ),
                         onChanged: (v) => setState(() => _poseName = v),
                       ),
@@ -252,7 +281,6 @@ class _CreatePoseTemplatePageState extends State<CreatePoseTemplatePage> {
 
                     const SizedBox(height: 20),
 
-                    // Capture Button
                     GestureDetector(
                       onTap: _poseName.isNotEmpty ? _capturePoseTemplate : null,
                       child: Container(
@@ -279,7 +307,6 @@ class _CreatePoseTemplatePageState extends State<CreatePoseTemplatePage> {
             ),
           ),
 
-          // Saving Overlay
           if (_isSaving)
             Container(
               color: Colors.black54,
